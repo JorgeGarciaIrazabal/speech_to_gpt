@@ -1,0 +1,14 @@
+name: speech_to_gpt
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - fastapi=0.*.*
+  - uvicorn=0.*.*
+  - python-multipart = 0.0.*
+  - transformers=4.*.*
+  - pytorch
+  - pip
+platforms:
+  - linux-64

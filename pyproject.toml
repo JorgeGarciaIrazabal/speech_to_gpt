@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "speech-to-gpt"
+version = "0.1.0"
+description = ""
+authors = ["Jorge Garcia Irazabal"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.109.0"
+uvicorn = "^0.27.0.post1"
+python-multipart = "^0.0.6"
+faster-whisper = "^0.10.0"
+transformers = "^4.37.2"
+timm = "^0.9.12"
+einops = "^0.7.0"
+ollama = "^0.1.6"
+
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

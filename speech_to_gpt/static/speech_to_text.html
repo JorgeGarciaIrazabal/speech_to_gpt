@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech to Text</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            height: calc(100% - 100px); /* Subtracting the height of the record button */
+            overflow-y: auto; /* Enable vertical scrolling */
+        }
+
+        .record-button {
+            position: fixed;
+            bottom: 20px;
+            right: 50%;
+            transform: translateX(50%);
+            font-size: 32px;
+            padding: 20px 40px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .record-button:hover {
+            background-color: darkblue;
+        }
+
+        .record-button:active {
+            background-color: green;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <ul id="message-list"></ul>
+</div>
+
+<button id="record-button" class="record-button" onmousedown="startRecording()"
+        onmouseup="stopRecording()" onmouseleave="stopRecording()">
+    Record Audio
+</button>
+<canvas id="photo-canvas" style="display: none;"></canvas>
+<script>
+    var mediaRecorder; // Declare mediaRecorder variable outside the function
+    var recordedChunks = []; // Array to store recorded audio chunks
+
+    function startRecording() {
+        document.getElementById('record-button').innerText = 'Recording...';
+        console.log('Requesting microphone access...');
+        navigator.mediaDevices.getUserMedia({audio: true})
+            .then(function (stream) {
+                console.log('Access to microphone granted');
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.start();
+                mediaRecorder.addEventListener('dataavailable', function (event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        if (mediaRecorder.state === 'inactive') {
+                            sendRecording();
+                        }
+                    }
+                });
+                console.log('Recording started');
+            })
+            .catch(function (error) {
+                console.error('Error accessing microphone:', error);
+            });
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+
+            console.log('Recording stopped');
+        }
+        document.getElementById('record-button').innerText = 'Record Audio';
+    }
+
+    function sendRecording() {
+        if (recordedChunks.length > 0) {
+            var blob = new Blob(recordedChunks, {type: 'audio/webm'});
+            var formData = new FormData();
+
+            formData.append('audio', blob, 'recording.webm');
+
+            fetch('../upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(function (response) {
+                    response.json().then(function (body) {
+                        var messageList = document.getElementById('message-list');
+                        var listItem = document.createElement('li');
+                        listItem.innerText = body["message"];
+                        messageList.appendChild(listItem);
+                    });
+                })
+                .catch(function (error) {
+                    console.error('Error sending recording to server:', error);
+                });
+        }
+    }
+
+    function sendPhoto() {
+        var video = document.createElement('video');
+        var canvas = document.getElementById('photo-canvas');
+        var context = canvas.getContext('2d');
+
+        navigator.mediaDevices.getUserMedia({video: true})
+            .then(function (stream) {
+                video.srcObject = stream;
+                video.onloadedmetadata = function () {
+                    video.play();
+                    // send photo to ../upload_photo as a file
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(function (blob) {
+                        var formData = new FormData();
+                        formData.append('photo', blob, 'photo.png');
+                        fetch('../upload_photo', {
+                            method: 'POST',
+                            body: formData
+                        })
+                            .then(function (response) {
+                                console.log('Photo sent to server, response:', response);
+                            })
+                            .catch(function (error) {
+                                console.error('Error sending photo to server:', error);
+                            });
+                    });
+                };
+            })
+            .catch(function (error) {
+                console.error('Error accessing webcam:', error);
+            });
+    }
+
+    // send photo every 2 seconds
+    setInterval(sendPhoto, 2000);
+</script>
+</body>
+</html>
