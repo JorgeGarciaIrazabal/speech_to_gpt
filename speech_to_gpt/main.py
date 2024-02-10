@@ -1,9 +1,10 @@
 from datetime import datetime
+from tempfile import TemporaryDirectory
 from fastapi import FastAPI, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from speech_to_gpt.constants import photos_path
-from speech_to_gpt.llms.friend import chat
+from speech_to_gpt.llms.friend import chat, text_to_speech
 
 app = FastAPI()
 
@@ -14,13 +15,13 @@ app.mount("/static", StaticFiles(directory="speech_to_gpt/static", html=True), n
 @app.post("/upload")
 async def upload_audio(audio: UploadFile = File(...)):
     contents = await audio.read()
-    with open(audio.filename, "wb") as f:
-        f.write(contents)
-    # return {"filename": audio.filename}
-
-    response = await chat(Path(audio.filename))
-    print(response['message']["content"])
-    return {"message": response['message']["content"]}
+    with TemporaryDirectory() as td:
+        audio_path = Path(td) / audio.filename
+        audio_path.write_bytes(contents)
+        response = await chat(audio_path)
+        print(response['message']["content"])
+        text_to_speech(response['message']["content"], Path("audio_path.wav"))
+        return {"message": response['message']["content"]}
 
 
 @app.post("/upload_photo")

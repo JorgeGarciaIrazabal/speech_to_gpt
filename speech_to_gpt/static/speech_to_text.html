@@ -36,11 +36,31 @@
         .record-button:active {
             background-color: green;
         }
+
+        #message-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #message-list li {
+            background-color: #e3f7d2;
+            padding: 10px;
+            margin: 5px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+        }
+
+        #message-list li:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <ul id="message-list"></ul>
+    <ul id="message-list">
+    </ul>
 </div>
 
 <button id="record-button" class="record-button" onmousedown="startRecording()"
@@ -86,10 +106,10 @@
 
     function sendRecording() {
         if (recordedChunks.length > 0) {
-            var blob = new Blob(recordedChunks, {type: 'audio/webm'});
+            var blob = new Blob(recordedChunks, {type: 'audio/wav'});
             var formData = new FormData();
 
-            formData.append('audio', blob, 'recording.webm');
+            formData.append('audio', blob, 'recording.wav');
 
             fetch('../upload', {
                 method: 'POST',
