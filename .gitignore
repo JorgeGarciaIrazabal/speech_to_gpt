@@ -163,5 +163,5 @@ photos/
 .vscode/
 .fleet/
 jgarciairaza_poc
-
+models/
 *.wav

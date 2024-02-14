@@ -19,14 +19,14 @@
             bottom: 20px;
             right: 50%;
             transform: translateX(50%);
-            font-size: 32px;
-            padding: 20px 40px;
+            font-size: 28px;
+            padding: 15px 20px;
             background-color: blue;
             color: white;
             border: none;
             cursor: pointer;
             border-radius: 10px;
-            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+            box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2);
         }
 
         .record-button:hover {
@@ -35,6 +35,18 @@
 
         .record-button:active {
             background-color: green;
+        }
+
+        .play-button {
+            font-size: 14px;
+            padding: 5px 10px;
+            background-color: lightgray;
+            color: black;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            
         }
 
         #message-list {
@@ -67,6 +79,11 @@
         onmouseup="stopRecording()" onmouseleave="stopRecording()">
     Record Audio
 </button>
+
+<button id="play-button" class="play-button" onclick="playAudio()">
+    Play Audio
+</button>
+
 <canvas id="photo-canvas" style="display: none;"></canvas>
 <script>
     var mediaRecorder; // Declare mediaRecorder variable outside the function
@@ -101,7 +118,6 @@
 
             console.log('Recording stopped');
         }
-        document.getElementById('record-button').innerText = 'Record Audio';
     }
 
     function sendRecording() {
@@ -110,21 +126,40 @@
             var formData = new FormData();
 
             formData.append('audio', blob, 'recording.wav');
+            document.getElementById('record-button').innerText = 'Thinking...';
+            document.getElementById('record-button').disabled = true;
 
             fetch('../upload', {
                 method: 'POST',
                 body: formData
             })
                 .then(function (response) {
-                    response.json().then(function (body) {
-                        var messageList = document.getElementById('message-list');
-                        var listItem = document.createElement('li');
-                        listItem.innerText = body["message"];
-                        messageList.appendChild(listItem);
-                    });
+                    var reader = response.body.getReader();
+                    var decoder = new TextDecoder();
+                    var messageList = document.getElementById('message-list');
+                    var listItem = document.createElement('li');
+                    messageList.appendChild(listItem);
+
+                    function readStream() {
+                        return reader.read().then(function (result) {
+                            if (result.done) {
+                                return;
+                            }
+                            var chunk = decoder.decode(result.value, {stream: true});
+                            listItem.innerText = listItem.innerText + chunk;
+                            return readStream();
+                        });
+                    }
+
+                    return readStream();
                 })
                 .catch(function (error) {
                     console.error('Error sending recording to server:', error);
+                })
+                .finally(function () {
+                    recordedChunks = [];
+                    document.getElementById('record-button').innerText = 'Record Audio';
+                    document.getElementById('record-button').disabled = false;
                 });
         }
     }
@@ -163,6 +198,70 @@
                 console.error('Error accessing webcam:', error);
             });
     }
+
+    function _playAudio() {
+        fetch('../audio')
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            var reader = response.body.getReader();
+            const audioContext = new AudioContext();
+
+            const processChunk = (chunk) => {
+                const source = audioContext.createBufferSource();
+                audioContext.decodeAudioData(chunk, (buffer) => {
+                    source.buffer = buffer;
+                    source.connect(audioContext.destination);
+                    source.start(0);
+                });
+            };
+            return reader.read().then(function handleResult({ done, value }) {
+                if (done) {
+                    console.log('Stream finished');
+                    return;
+                }
+                processChunk(value);
+                return reader.read().then(handleResult);
+            });
+        })
+        .catch(function(error) {
+            console.error('Error fetching audio:', error);
+        });
+    }
+
+    function playAudio() {
+        const audioContext = new AudioContext();
+        fetch('../audio')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const reader = response.body.getReader();
+            const chunks = [];
+            return reader.read().then(function process({ done, value }) {
+                if (done) {
+                    return chunks;
+                }
+                chunks.push(value);
+                return reader.read().then(process);
+            });
+        })
+        .then(chunks => {
+            const audioData = new Uint8Array(chunks.reduce((acc, val) => acc.concat(Array.from(val)), []));
+            return audioContext.decodeAudioData(audioData.buffer);
+        })
+        .then(audioBuffer => {
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+        })
+        .catch(err => console.error(err));
+    }
+
+
+
 
     // send photo every 2 seconds
     setInterval(sendPhoto, 2000);
