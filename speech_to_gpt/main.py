@@ -1,5 +1,7 @@
 import asyncio
 from datetime import datetime
+from random import randint
+import random
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -7,7 +9,7 @@ from pathlib import Path
 from speech_to_gpt.constants import photos_path
 from speech_to_gpt.llms.friend import chat, init_text_to_speech
 from speech_to_gpt.llms.text_to_speech_manager import TTS_Manager
-from speech_to_gpt.utils.measure import async_timeit
+from speech_to_gpt.utils.measure import async_timeit, timeit
 
 app = FastAPI()
 managers: list[TTS_Manager] = []
@@ -17,8 +19,9 @@ app.mount("/static", StaticFiles(directory="speech_to_gpt/static", html=True), n
 
 
 async def text_generator(tts_manager: TTS_Manager, response):
-    for message in response:
-        tts_manager.text_queue.put(message)
+    for i, message in enumerate(response):
+        if i != 0:
+            tts_manager.text_queue.put(message)
         yield message
     tts_manager.loading_data = False
         
@@ -43,20 +46,8 @@ async def upload_audio(audio: UploadFile = File(...)):
 
 
 @app.get("/audio")
-@async_timeit
-async def get_audio():
-    # async def audio_chunk_generator():
-    #     with open("uploaded_audio_path.wav", "rb") as f:
-    #         while True:
-    #             chunk = f.read(1024)
-    #             await asyncio.sleep(0.001)
-    #             if not chunk:
-    #                 break
-    #             yield chunk
-    #         print("finished")
-    # a = (r.read_bytes() for r in [Path("uploaded_audio_path.wav")])
-    # return StreamingResponse(audio_chunk_generator(), media_type="audio/wav")
-
+@timeit
+def get_audio():
     tts_manager = managers[-1]
     return StreamingResponse(tts_manager.audio_chunk_generator(), media_type="audio/wav")
 
@@ -79,5 +70,5 @@ async def upload_photo(photo: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-
+    TTS_Manager()
     uvicorn.run(app, host="0.0.0.0", port=8000)

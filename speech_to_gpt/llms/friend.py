@@ -19,6 +19,8 @@ _messages = []
 def chat(audio: bytes):
     new_user_message = speech_to_text(audio)
     message = {'role': 'user', 'content': new_user_message}
+    print("new_user_message", new_user_message)
+    yield new_user_message
     for m in Client().chat(model=MODEL, messages=[message], stream=True):
         yield m["message"]["content"]
 

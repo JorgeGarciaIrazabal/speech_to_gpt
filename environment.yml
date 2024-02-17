@@ -9,6 +9,8 @@ dependencies:
   - python-multipart = 0.0.*
   - transformers=4.*.*
   - pytorch
+  - deepspeed
+  - ollama
   - pip
 platforms:
   - linux-64
