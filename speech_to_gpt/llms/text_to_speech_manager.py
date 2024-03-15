@@ -46,7 +46,7 @@ class TTS_Manager():
         self.stream.play(
             fast_sentence_fragment=True,
             muted=True,
-            output_wavfile=str(self.audio_path),
+            # output_wavfile=str(self.audio_path),
             buffer_threshold_seconds=3.0,
             on_audio_chunk=self.audio_queue.put
         )
@@ -71,11 +71,10 @@ class TTS_Manager():
 
     
     def audio_chunk_generator(self):
-        while self.synthesizing_audio and not self.audio_path.exists():
-            time.sleep(0.1)
+        time.sleep(0.5)
         total_bytes = b""
         was_synthesizing = True
-        bps, channels, rate = self.stream.engine.get_stream_info()
+        _, channels, rate = self.stream.engine.get_stream_info()
         while was_synthesizing  or not self.audio_queue.empty():
             was_synthesizing = self.synthesizing_audio
             try:
@@ -88,6 +87,3 @@ class TTS_Manager():
             except queue.Empty:
                 time.sleep(0.5)
                 continue
-            
-        print("first chuck", self.audio_path.read_bytes()[:60])
-        print("finished", len(self.audio_path.read_bytes()), len(total_bytes))

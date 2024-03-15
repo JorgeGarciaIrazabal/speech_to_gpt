@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "QuestionType": {
+      "enum": [
+        "numeric",
+        "text",
+        "date",
+        "long_text",
+        "choice"
+      ],
+      "title": "QuestionType",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "question": {
+      "description": "the question to ask the user to clarify the context.",
+      "title": "Question",
+      "type": "string"
+    },
+    "type": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/QuestionType"
+        }
+      ],
+      "description": "the type of question, it can be numeric, text, date, long_text, choice. If the type is choice, the choices field must be filled."
+    },
+    "choices": {
+      "description": "a list of choices for the question, only used when the type is choice.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Choices",
+      "type": "array"
+    }
+  },
+  "required": [
+    "question",
+    "type"
+  ],
+  "title": "QuestionMessage",
+  "type": "object"
+}
+
