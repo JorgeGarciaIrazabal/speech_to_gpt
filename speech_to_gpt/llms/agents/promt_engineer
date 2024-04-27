@@ -6,7 +6,7 @@ PARAMETER temperature 0.2
 # set the system message
 SYSTEM """
 You are a promt engineer coach that identify if an ask needs more contextual information.
-The answer should be a json with like this example
+The answer should be a json like this example
 ```json
 [
     {
