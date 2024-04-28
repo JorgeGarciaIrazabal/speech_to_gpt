@@ -1,12 +1,18 @@
 import functools
 from io import BytesIO
-from typing import Iterable
+from typing import Iterable, List
 
 from faster_whisper import WhisperModel
 from ollama import Client
 
 from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.utils.measure import timeit
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:11434/v1",
+    api_key="ollama",  # required, but unused
+)
 
 MODEL = "llama3:latest"
 _messages = []
@@ -18,18 +24,21 @@ def chat_audio(audio: bytes) -> Iterable[ChatMessage]:
     yield from chat_text(new_user_message)
 
 
-def chat_text(new_user_message: str) -> Iterable[ChatMessage]:
-    print("new_user_message", new_user_message)
-    message = ChatMessage(role="user", content=new_user_message)
-    yield message
+def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
+    print("new_user_message", messages[-1].content)
     # additional_questions = get_questions_to_expand_context(new_user_message)
     additional_questions = []
     for question in additional_questions:
         print(question.model_dump())
         yield question
     if not additional_questions:
-        for m in Client().chat(model=MODEL, messages=[message.model_dump()], stream=True):
-            message = ChatMessage(role="agent", content=m["message"]["content"])
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[message.model_dump() for message in messages],
+            stream=True,
+        )
+        for m in response:
+            message = ChatMessage(role="assistant", content=m.choices[0].delta.content)
             yield message
 
 
@@ -37,7 +46,7 @@ def detailed_answer(message: str):
     message = ChatMessage(role="user", content=message)
 
     for m in Client().chat(model=MODEL, messages=[message.model_dump()], stream=True):
-        message = ChatMessage(role="agent", content= m["message"]["content"])
+        message = ChatMessage(role="agent", content=m["message"]["content"])
         yield message
 
 
@@ -49,6 +58,7 @@ def _init_speech_to_text_model():
     model = WhisperModel(model_size, device="cuda", compute_type="int8_float32")
     print("model loaded distil-medium.en")
     return model
+
 
 @timeit
 def speech_to_text(audio: bytes):

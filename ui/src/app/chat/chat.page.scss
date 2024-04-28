@@ -1,0 +1,18 @@
+.message {
+  color: black;
+  border-radius: 15px;
+  padding: 3px;
+  margin: 3px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  --border-radius: 6px;
+}
+
+.message-user {
+  text-align: right;
+  --background: #d1ecf1;
+}
+
+.message-assistant {
+  text-align: left;
+  --background: #f8d7da;
+}

@@ -1,7 +1,10 @@
+from typing import List
+
 from fastapi import File, UploadFile
 from pydantic import BaseModel
 
 from speech_to_gpt.app import app
+from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.friend import chat_audio, chat_text
 from speech_to_gpt.utils.measure import async_timeit, timeit
 
@@ -20,8 +23,8 @@ async def chat_audio_endpoint(audio: UploadFile = File(...)) -> ChatResponse:
 
 @app.post("/chat")
 @async_timeit
-async def chat_endpoint(message: str) -> ChatResponse:
-    response = chat_text(message)
+async def chat_endpoint(messages: List[ChatMessage]) -> ChatResponse:
+    response = chat_text(messages)
 
     return ChatResponse(response="".join([m.content for m in response]))
 

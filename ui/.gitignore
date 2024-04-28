@@ -19,7 +19,7 @@ log.txt
 
 # Ionic
 /.ionic
-/www
+/www_old
 /platforms
 /plugins
 
@@ -60,7 +60,6 @@ yarn-error.log
 /.nx
 /.nx/cache
 /connect.lock
-/coverage
 /libpeerconnection.log
 testem.log
 /typings

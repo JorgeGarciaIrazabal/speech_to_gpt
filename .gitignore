@@ -167,3 +167,6 @@ models/
 .idea
 
 users.db
+
+www/
+speech_to_gpt/static/*
