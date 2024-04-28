@@ -165,3 +165,5 @@ jgarciairaza_poc
 models/
 *.wav
 .idea
+
+users.db

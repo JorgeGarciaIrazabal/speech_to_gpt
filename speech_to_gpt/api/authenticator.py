@@ -9,10 +9,10 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 
-from src.meal_organizer_2.api.app_init import app
-from src.meal_organizer_2.db.db_init import get_session_maker
-from src.meal_organizer_2.db.user_db import UserRepository, User as UrUser
-from src.meal_organizer_2.db.errors import UserNotFoundError
+from speech_to_gpt.api import app
+from speech_to_gpt.db.db_init import get_session_maker
+from speech_to_gpt.db.user_db import UserRepository, User as UrUser
+from speech_to_gpt.db.errors import UserNotFoundError
 
 # to get a string like this run:
 # openssl rand -hex 32

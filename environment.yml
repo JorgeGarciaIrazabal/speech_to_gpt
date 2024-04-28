@@ -13,5 +13,10 @@ dependencies:
   - ollama
   - tenacity
   - pip
+  - ruff
+  - python-jose
+  - passlib
+  - sqlalchemy
+  - sqlalchemy-utils
 platforms:
   - linux-64

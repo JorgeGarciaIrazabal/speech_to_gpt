@@ -1,11 +1,11 @@
 from sqlalchemy import Column, Integer, String
 
-from src.meal_organizer_2.db.db_init import Base
+from .db_init import Base
 from typing import Callable, Iterator
 from contextlib import AbstractContextManager
 from sqlalchemy.orm import Session
 
-from src.meal_organizer_2.db.errors import UserNotFoundError
+from .errors import UserNotFoundError
 
 
 class User(Base):
