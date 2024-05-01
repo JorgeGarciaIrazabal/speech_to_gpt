@@ -1,6 +1,7 @@
 torch<2.2.0
-faster-whisper
-RealtimeTTS
 ollama
 timm
 torchvision
+duckduckgo-search
+fake_useragent
+html2text

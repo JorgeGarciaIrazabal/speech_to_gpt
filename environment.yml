@@ -18,5 +18,8 @@ dependencies:
   - passlib
   - sqlalchemy
   - sqlalchemy-utils
+  - langchain
+  - phidata
+  - chromadb
 platforms:
   - linux-64

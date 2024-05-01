@@ -6,15 +6,10 @@ from faster_whisper import WhisperModel
 from ollama import Client
 
 from speech_to_gpt.llms.chat_types import ChatMessage
+from speech_to_gpt.llms.open_ai_client import client, GENERIC_MODEL
 from speech_to_gpt.utils.measure import timeit
-from openai import OpenAI
 
-client = OpenAI(
-    base_url="http://localhost:11434/v1",
-    api_key="ollama",  # required, but unused
-)
 
-MODEL = "llama3:latest"
 _messages = []
 
 
@@ -33,7 +28,7 @@ def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
         yield question
     if not additional_questions:
         response = client.chat.completions.create(
-            model=MODEL,
+            model=GENERIC_MODEL,
             messages=[message.model_dump() for message in messages],
             stream=True,
         )
@@ -45,7 +40,9 @@ def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
 def detailed_answer(message: str):
     message = ChatMessage(role="user", content=message)
 
-    for m in Client().chat(model=MODEL, messages=[message.model_dump()], stream=True):
+    for m in Client().chat(
+        model=GENERIC_MODEL, messages=[message.model_dump()], stream=True
+    ):
         message = ChatMessage(role="agent", content=m["message"]["content"])
         yield message
 
