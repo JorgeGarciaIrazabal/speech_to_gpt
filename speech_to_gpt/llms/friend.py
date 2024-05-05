@@ -5,6 +5,7 @@ from typing import Iterable, List
 from faster_whisper import WhisperModel
 from ollama import Client
 
+from speech_to_gpt.llms.action_finder import get_required_actions
 from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.open_ai_client import client, GENERIC_MODEL
 from speech_to_gpt.utils.measure import timeit
@@ -27,6 +28,7 @@ def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
         print(question.model_dump())
         yield question
     if not additional_questions:
+        action = get_required_actions(messages[-1])
         response = client.chat.completions.create(
             model=GENERIC_MODEL,
             messages=[message.model_dump() for message in messages],

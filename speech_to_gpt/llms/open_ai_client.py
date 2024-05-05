@@ -9,6 +9,10 @@ client = OpenAI(
     base_url="http://localhost:11434/v1",
     api_key="ollama",  # required, but unused
 )
+lm_studio_client = OpenAI(
+    base_url="http://localhost:1234/v1",
+    api_key="lmstudio",  # required, but unused
+)
 
 
 def search_online(topic: str, news: bool = False):

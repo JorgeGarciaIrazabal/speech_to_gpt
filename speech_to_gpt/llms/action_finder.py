@@ -1,42 +1,28 @@
 import json
+import logging
 import textwrap
 
 import tenacity
-from langchain.document_loaders import AsyncHtmlLoader
-from langchain.document_transformers import Html2TextTransformer
-from langchain.embeddings import OllamaEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.tools import DuckDuckGoSearchRun
-from langchain.utilities import DuckDuckGoSearchAPIWrapper
-from langchain.vectorstores import Chroma
+from tenacity import after_log
 
 from speech_to_gpt import ChatMessage
+from speech_to_gpt.llms.actions.search_online import search_online
 from speech_to_gpt.llms.open_ai_client import (
-    client,
-    GENERIC_MODEL,
+    lm_studio_client,
 )
 
-from langchain.agents import Tool
-
-ddg_search = DuckDuckGoSearchRun()
-tools = [
-    Tool(
-        name="DuckDuckGo Search",
-        func=ddg_search.run,
-        description="Useful to browse information from the Internet.",
-    )
-]
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 functions = [
     {
         "name": "search_online",
         "description": "Search online for specific topic or question",
         "parameters": {
-            "topic": {
+            "question": {
                 "type": "string",
-                "description": "Topic to search for in a way that the search engine DuckDuckGo can understand",
-            },
-            "news": {"type": "boolean", "description": "Search only for news"},
+                "description": "Question to search for. The question should be in a way that DuckDuckGo can easily find the answer. The question sent to the function should be aligned in meaning with the user's question.",
+            }
         },
     }
 ]
@@ -45,73 +31,34 @@ functions = [
 system_message = {
     "role": "system",
     "content": textwrap.dedent(f"""
-        You are a LLM agent in charge of choosing zero or one action to take based on the user's message.
-        The allow functions have the follow format:
+        You are a LLM agent that decides if it is worth it to run  one of the following actions or not.
+        If the question does not require any of the following actions just response an empty json.
+        
+        Actions:
         ```json
         {json.dumps(functions[0], indent=4)}
         ```
-
-        Return with the action to take and its parameters like in this example:
+                
+        Response with the action to take and its parameters if a format like in this example (but only if the action is required):
         ```json
         {{
             "action": "the name of the function to execute",
             "parameters": {{
-                "topic": "what is the current stock price of AAPL?",
-                "news": true
+                "question": "what is the current stock price of AAPL?"
             }}
         }}
         ```
-        Response only in JSON format.
+        
+        If no action is required like "tell me a joke", "tell me a story", etc. return an empty json like:
+        ```
+        {{}}
+        ```
+        
+        IMPORTANT: 
+        - Response with the json only. DO NOT explain how to use the the function. 
+        - The output will be used by a computer
         """),
 }
-
-
-def search_online(topic: str, news: bool = False):
-    wrapper = DuckDuckGoSearchAPIWrapper(max_results=5)
-    res = wrapper.results(topic, 3, backend="api")
-    links = [r["link"] for r in res]
-    loader = AsyncHtmlLoader(links, verify_ssl=False)
-    docs = loader.load()
-    html2text_transformer = Html2TextTransformer()
-    docs_transformed = html2text_transformer.transform_documents(docs)
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    texts = text_splitter.create_documents([d.page_content for d in docs_transformed])
-    ollama_emb = OllamaEmbeddings(
-        model="nomic-embed-text",
-    )
-    # embed_texts = ollama_emb.embed_documents(texts)
-    vectordb = Chroma.from_documents(
-        documents=texts,
-        embedding=ollama_emb,
-    )
-    docs = vectordb.similarity_search(topic, k=3)
-    print("docs embeded")
-    content_data = {"\n".join(d.page_content for d in docs)}
-    result = client.chat.completions.create(
-        model=GENERIC_MODEL,
-        temperature=0.0,
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an assistant that analyzes the content of multiple webpages."
-                " to give a clear and concise answer of the question provided."
-                " Do not provide information of where did you find the information, just answer the question",
-            },
-            {
-                "role": "user",
-                "content": f"""Based on this data: 
-
-```
-Web Page 1:
-{content_data}
-```
-answer the following question: {topic}
-""",
-            },
-        ],
-        stream=False,
-    )
-    print(result.choices[0].message.content)
 
 
 string_to_function_map = {
@@ -119,26 +66,29 @@ string_to_function_map = {
 }
 
 
-@tenacity.retry(wait=tenacity.wait_fixed(0), stop=tenacity.stop_after_attempt(3))
+@tenacity.retry(
+    wait=tenacity.wait_fixed(0),
+    stop=tenacity.stop_after_attempt(2),
+    after=after_log(logger, logging.INFO),
+)
 def get_required_actions(message: ChatMessage):
     print("staring_get_required_actions")
-    result = client.chat.completions.create(
-        model="phi3:instruct",
+    result = lm_studio_client.chat.completions.create(
+        model="bubu",
         functions=functions,
         messages=[system_message, message.model_dump()],
     )
     content = result.choices[0].message.content
     # extract json from content
-    content = "{" + content.split("{", 1)[-1].rsplit("}", 1)[0] + "}"
     print(content)
+    content = "{" + content.split("{", 1)[-1].rsplit("}", 1)[0] + "}"
     content = json.loads(content)
-    print("content", content)
-    string_to_function_map[content["action"]](**content["parameters"])
+    return content
 
 
 if __name__ == "__main__":
     message = ChatMessage(
         role="user",
-        content="latest news about covid?",
+        content="how to make my daughter happy?",
     )
     result = get_required_actions(message)
