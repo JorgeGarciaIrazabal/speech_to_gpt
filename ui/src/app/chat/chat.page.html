@@ -15,11 +15,15 @@
   </ion-header>
 
   <div id="container">
+
     <ion-list>
       <ion-item *ngFor="let message of messages"
                 class="message"
                 [ngClass]="{'message-user': message.role === 'user', 'message-assistant': message.role === 'assistant'}">
-        <ion-label>{{ message.content }}</ion-label>
+        <ion-label>
+          <markdown [data]="message.content">
+          </markdown>
+        </ion-label>
       </ion-item>
     </ion-list>
   </div>
@@ -28,6 +32,9 @@
 <ion-footer>
   <ion-toolbar>
     <ion-grid>
+      <ion-row>
+        <ion-label *ngIf="logMessage"><ion-spinner></ion-spinner>{{ logMessage }}</ion-label>
+      </ion-row>
       <ion-row>
         <ion-col>
           <ion-input #input

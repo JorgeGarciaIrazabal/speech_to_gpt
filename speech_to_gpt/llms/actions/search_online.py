@@ -4,15 +4,19 @@ from langchain.document_loaders import AsyncHtmlLoader
 from langchain.document_transformers import Html2TextTransformer
 from langchain.utilities import DuckDuckGoSearchAPIWrapper
 
+from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.open_ai_client import lm_studio_client, GENERIC_MODEL
 
 
 def search_online(question: str, news: bool = False):
     wrapper = DuckDuckGoSearchAPIWrapper(max_results=5)
+
+    yield ChatMessage(role="log_message", content="searching online")
     res = wrapper.results(question, 3, backend="api")
     links = [r["link"] for r in res]
     loader = AsyncHtmlLoader(links, verify_ssl=False)
     docs = loader.load()
+    yield ChatMessage(role="log_message", content="analyzing data")
     html2text_transformer = Html2TextTransformer(ignore_links=False, ignore_images=True)
     docs_transformed = html2text_transformer.transform_documents(docs)
     data_in_web = "\nWeb Page: \n".join(d.page_content for d in docs_transformed)
@@ -45,6 +49,9 @@ Answer the following: {question}
 """,
             },
         ],
-        stream=False,
+        stream=True,
     )
-    print(result.choices[0].message.content)
+    for m in result:
+        if m.choices[0].delta.content:
+            message = ChatMessage(role="assistant", content=m.choices[0].delta.content)
+            yield message

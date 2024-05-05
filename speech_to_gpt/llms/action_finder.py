@@ -5,8 +5,8 @@ import textwrap
 import tenacity
 from tenacity import after_log
 
-from speech_to_gpt import ChatMessage
 from speech_to_gpt.llms.actions.search_online import search_online
+from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.open_ai_client import (
     lm_studio_client,
 )
@@ -24,7 +24,12 @@ functions = [
                 "description": "Question to search for. The question should be in a way that DuckDuckGo can easily find the answer. The question sent to the function should be aligned in meaning with the user's question.",
             }
         },
-    }
+    },
+    {
+        "name": "no_action",
+        "description": "Action representing that no action is required.",
+        "parameters": {},
+    },
 ]
 
 
@@ -83,6 +88,11 @@ def get_required_actions(message: ChatMessage):
     print(content)
     content = "{" + content.split("{", 1)[-1].rsplit("}", 1)[0] + "}"
     content = json.loads(content)
+    if (
+        content.get("action") == "no_action"
+        or content.get("action") not in string_to_function_map
+    ):
+        return {}
     return content
 
 

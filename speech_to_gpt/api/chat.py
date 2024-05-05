@@ -2,6 +2,7 @@ from typing import List
 
 from fastapi import File, UploadFile
 from pydantic import BaseModel
+from starlette.responses import StreamingResponse
 
 from speech_to_gpt.app import app
 from speech_to_gpt.llms.chat_types import ChatMessage
@@ -23,10 +24,14 @@ async def chat_audio_endpoint(audio: UploadFile = File(...)) -> ChatResponse:
 
 @app.post("/chat")
 @async_timeit
-async def chat_endpoint(messages: List[ChatMessage]) -> ChatResponse:
+async def chat_endpoint(messages: List[ChatMessage]) -> StreamingResponse:
     response = chat_text(messages)
 
-    return ChatResponse(response="".join([m.content for m in response]))
+    def model_dump_json():
+        for r in response:
+            yield r.model_dump_json() + "%%%%"
+
+    return StreamingResponse(model_dump_json(), media_type="application/json")
 
 
 @app.get("/audio")
