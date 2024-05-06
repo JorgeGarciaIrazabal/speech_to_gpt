@@ -8,7 +8,8 @@ from tenacity import after_log
 from speech_to_gpt.llms.actions.search_online import search_online
 from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.open_ai_client import (
-    lm_studio_client,
+    get_client,
+    GENERIC_MODEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,6 @@ system_message = {
     "role": "system",
     "content": textwrap.dedent(f"""
         You are a LLM agent that decides if it is worth it to run  one of the following actions or not.
-        If the question does not require any of the following actions just response an empty json.
         
         Actions:
         ```json
@@ -54,7 +54,7 @@ system_message = {
         }}
         ```
         
-        If no action is required like "tell me a joke", "tell me a story", etc. return an empty json like:
+        If no action is required like "tell me a joke", "tell me a story", "hello", etc. or any other conversational question, return an empty json like:
         ```
         {{}}
         ```
@@ -72,21 +72,23 @@ string_to_function_map = {
 
 
 @tenacity.retry(
-    wait=tenacity.wait_fixed(0),
+    wait=tenacity.wait_fixed(0.1),
     stop=tenacity.stop_after_attempt(2),
     after=after_log(logger, logging.INFO),
 )
 def get_required_actions(message: ChatMessage):
     print("staring_get_required_actions")
-    result = lm_studio_client.chat.completions.create(
-        model="bubu",
+    result = get_client().chat.completions.create(
+        model=GENERIC_MODEL,
         functions=functions,
         messages=[system_message, message.model_dump()],
+        max_tokens=2000,
     )
     content = result.choices[0].message.content
     # extract json from content
     print(content)
     content = "{" + content.split("{", 1)[-1].rsplit("}", 1)[0] + "}"
+    content = content.replace("\\", "")
     content = json.loads(content)
     if (
         content.get("action") == "no_action"

@@ -1,10 +1,14 @@
+from datetime import datetime
+from typing import Annotated
 from typing import List
 
+from fastapi import Depends
 from fastapi import File, UploadFile
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 
-from speech_to_gpt.app import app
+from speech_to_gpt.api import app
+from speech_to_gpt.api.authenticator import User, get_current_user
 from speech_to_gpt.llms.chat_types import ChatMessage
 from speech_to_gpt.llms.friend import chat_audio, chat_text
 from speech_to_gpt.utils.measure import async_timeit, timeit
@@ -17,6 +21,7 @@ class ChatResponse(BaseModel):
 @app.post("/chat-audio")
 @async_timeit
 async def chat_audio_endpoint(audio: UploadFile = File(...)) -> ChatResponse:
+    raise NotImplementedError("not implemented")
     response = chat_audio(await audio.read())
 
     return ChatResponse(response="".join([m.content for m in response]))
@@ -24,7 +29,10 @@ async def chat_audio_endpoint(audio: UploadFile = File(...)) -> ChatResponse:
 
 @app.post("/chat")
 @async_timeit
-async def chat_endpoint(messages: List[ChatMessage]) -> StreamingResponse:
+async def chat_endpoint(
+    messages: List[ChatMessage],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> StreamingResponse:
     response = chat_text(messages)
 
     def model_dump_json():
@@ -37,11 +45,13 @@ async def chat_endpoint(messages: List[ChatMessage]) -> StreamingResponse:
 @app.get("/audio")
 @timeit
 def get_audio():
+    raise NotImplementedError("not implemented")
     pass
 
 
 @app.post("/upload_photo")
 async def upload_photo(photo: UploadFile = File(...)):
+    raise NotImplementedError("not implemented")
     contents = await photo.read()
     # photo path is photo_ + timestamp
     photo_path = (

@@ -1,16 +1,18 @@
 import functools
+import textwrap
 from io import BytesIO
 from typing import Iterable, List
 
 from faster_whisper import WhisperModel
 from ollama import Client
+from tenacity import RetryError
 
 from speech_to_gpt.llms.action_finder import (
     get_required_actions,
     string_to_function_map,
 )
 from speech_to_gpt.llms.chat_types import ChatMessage
-from speech_to_gpt.llms.open_ai_client import GENERIC_MODEL, lm_studio_client
+from speech_to_gpt.llms.open_ai_client import GENERIC_MODEL, get_client
 from speech_to_gpt.utils.measure import timeit
 
 
@@ -32,14 +34,28 @@ def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
         print(question.model_dump())
         yield question
     if not additional_questions:
-        action = get_required_actions(messages[-1])
+        try:
+            action = get_required_actions(messages[-1])
+        except RetryError:
+            action = {}
         if string_to_function_map.get(action.get("action", "no_action")):
             yield from string_to_function_map[action["action"]](action["parameters"])
         else:
-            response = lm_studio_client.chat.completions.create(
+            all_messages = [
+                ChatMessage(
+                    role="system",
+                    content=textwrap.dedent(""""
+                    You are conversational AI talking to a person.
+                    Try to answer the questions asked, and help solve problems to the user.
+                    Also feel free to add funny jokes if you think it makes sense.
+                    """),
+                )
+            ] + messages
+            response = get_client().chat.completions.create(
                 model=GENERIC_MODEL,
-                messages=[message.model_dump() for message in messages],
+                messages=[message.model_dump() for message in all_messages],
                 stream=True,
+                max_tokens=20_000,
             )
             for m in response:
                 if m.choices[0].delta.content:

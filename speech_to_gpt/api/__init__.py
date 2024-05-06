@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from starlette.responses import RedirectResponse
 from starlette.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/app/chat")
+def redirect_chat():
+    return RedirectResponse(url="/static")
+
 
 # Serve static files
 app.mount("/static", StaticFiles(directory=str(static_path), html=True), name="static")

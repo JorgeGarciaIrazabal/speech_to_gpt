@@ -15,7 +15,8 @@ import {ChatMessage, DefaultService, OpenAPI} from "../../stgpt_api";
 import {addIcons} from "ionicons";
 import { send } from 'ionicons/icons';
 import {MarkdownComponent} from "ngx-markdown";
-
+import { Storage } from '@ionic/storage-angular';
+import { Router } from '@angular/router'; // Import Router
 
 @Component({
   selector: 'app-chat',
@@ -30,21 +31,33 @@ export class ChatPage implements OnInit{
   newMessage: string = "";
   sendingMessage: boolean = false;
   logMessage: string = "";
+  private _storage: Storage | null = null;
   @ViewChild('input') inputElement!: IonInput;
 
-  constructor() {
+  constructor(private storage: Storage, private router: Router) {
     addIcons({send})
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     console.log('init ChatPage')
+    this._storage = await this.storage.create();
+
+    try {
+      const token = await this._storage?.get("token");
+      OpenAPI.TOKEN = token.access_token;
+      await DefaultService.readUsersMeUsersMeGet()
+    } catch (error) {
+      console.error('User is not authenticated')
+      this.router.navigate(['/login/logout'])
+    }
+    console.log('User is authenticated')
     setTimeout(() => {
       this.inputElement.setFocus()
     }, 1);
   }
 
   async sendMessage() {
-    OpenAPI.BASE = 'http://0.0.0.0:8181';
+    await this.storage.create();
     this.messages.push({content:this.newMessage, role: 'user'});
     this.sendingMessage = true;
     let message_text = ""
@@ -53,9 +66,17 @@ export class ChatPage implements OnInit{
         method: 'POST',
         body: JSON.stringify(this.messages),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OpenAPI.TOKEN}`
         }
       });
+
+      if (!response.ok && response.status === 401) {
+          // If the status code is 401 (unauthorized), navigate the user back to the 'login/logout' route
+          await this.router.navigate(['/login/logout']);
+          return;
+      }
+
       const assistantMessage = {content:"", role: 'assistant'};
       this.messages.push(assistantMessage);
       if (response.body == null) {
@@ -91,5 +112,9 @@ export class ChatPage implements OnInit{
       await this.inputElement.setFocus()
       this.logMessage = "";
     }
+  }
+
+  clearChat() {
+    this.messages = [];
   }
 }

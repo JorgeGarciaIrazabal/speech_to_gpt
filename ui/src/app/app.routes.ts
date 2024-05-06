@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'chat',
+    redirectTo: 'login',
     pathMatch: 'full',
   },
   {
@@ -14,4 +14,8 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./login/login.page').then( m => m.LoginPage)
   },
+  {
+    path: 'login/logout',
+    loadComponent: () => import('./login/login.page').then( m => m.LoginPage)
+  }
 ];

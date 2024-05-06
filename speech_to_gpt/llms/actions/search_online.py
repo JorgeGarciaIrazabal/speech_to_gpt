@@ -1,18 +1,18 @@
 import textwrap
 
+from langchain import GoogleSearchAPIWrapper
 from langchain.document_loaders import AsyncHtmlLoader
 from langchain.document_transformers import Html2TextTransformer
-from langchain.utilities import DuckDuckGoSearchAPIWrapper
 
 from speech_to_gpt.llms.chat_types import ChatMessage
-from speech_to_gpt.llms.open_ai_client import lm_studio_client, GENERIC_MODEL
+from speech_to_gpt.llms.open_ai_client import GENERIC_MODEL, get_client
 
 
 def search_online(question: str, news: bool = False):
-    wrapper = DuckDuckGoSearchAPIWrapper(max_results=5)
+    wrapper = GoogleSearchAPIWrapper()
 
     yield ChatMessage(role="log_message", content="searching online")
-    res = wrapper.results(question, 3, backend="api")
+    res = wrapper.results(question, 3)
     links = [r["link"] for r in res]
     loader = AsyncHtmlLoader(links, verify_ssl=False)
     docs = loader.load()
@@ -20,7 +20,7 @@ def search_online(question: str, news: bool = False):
     html2text_transformer = Html2TextTransformer(ignore_links=False, ignore_images=True)
     docs_transformed = html2text_transformer.transform_documents(docs)
     data_in_web = "\nWeb Page: \n".join(d.page_content for d in docs_transformed)
-    result = lm_studio_client.chat.completions.create(
+    result = get_client().chat.completions.create(
         model=GENERIC_MODEL,
         temperature=0.0,
         max_tokens=32_000,

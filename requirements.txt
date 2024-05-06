@@ -5,3 +5,4 @@ torchvision
 duckduckgo-search
 fake_useragent
 html2text
+google-api-python-client
