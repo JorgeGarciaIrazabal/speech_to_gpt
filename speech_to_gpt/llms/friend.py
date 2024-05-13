@@ -20,9 +20,11 @@ _messages = []
 
 
 @timeit
-def chat_audio(audio: bytes) -> Iterable[ChatMessage]:
+def chat_audio(audio: bytes, messages: List[ChatMessage]) -> Iterable[ChatMessage]:
     new_user_message = speech_to_text(audio)
-    yield from chat_text(new_user_message)
+    messages.append(ChatMessage(role="user", content=new_user_message))
+    yield messages[-1]
+    yield from chat_text(messages)
 
 
 def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
@@ -39,30 +41,37 @@ def chat_text(messages: List[ChatMessage]) -> Iterable[ChatMessage]:
         except RetryError:
             action = {}
         if string_to_function_map.get(action.get("action", "no_action")):
-            yield from string_to_function_map[action["action"]](action["parameters"])
+            try:
+                yield from string_to_function_map[action["action"]](
+                    **action["parameters"]
+                )
+            except:
+                yield from basic_chat(messages)
         else:
-            all_messages = [
-                ChatMessage(
-                    role="system",
-                    content=textwrap.dedent(""""
+            yield from basic_chat(messages)
+
+
+def basic_chat(messages):
+    all_messages = [
+        ChatMessage(
+            role="system",
+            content=textwrap.dedent(""""
                     You are conversational AI talking to a person.
                     Try to answer the questions asked, and help solve problems to the user.
                     Also feel free to add funny jokes if you think it makes sense.
                     """),
-                )
-            ] + messages
-            response = get_client().chat.completions.create(
-                model=GENERIC_MODEL,
-                messages=[message.model_dump() for message in all_messages],
-                stream=True,
-                max_tokens=20_000,
-            )
-            for m in response:
-                if m.choices[0].delta.content:
-                    message = ChatMessage(
-                        role="assistant", content=m.choices[0].delta.content
-                    )
-                    yield message
+        )
+    ] + messages
+    response = get_client().chat.completions.create(
+        model=GENERIC_MODEL,
+        messages=[message.model_dump() for message in all_messages],
+        stream=True,
+        max_tokens=20_000,
+    )
+    for m in response:
+        if m.choices[0].delta.content:
+            message = ChatMessage(role="assistant", content=m.choices[0].delta.content)
+            yield message
 
 
 def detailed_answer(message: str):

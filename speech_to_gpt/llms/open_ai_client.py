@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-GENERIC_MODEL = "llama3:latest"
+GENERIC_MODEL = "llama3:8b-instruct-q8_0"
 # GENERIC_MODEL = "mixtral:latest"
 # GENERIC_MODEL = "llama3:latest"
 

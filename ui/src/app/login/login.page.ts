@@ -45,7 +45,6 @@ export class LoginPage implements OnInit {
   }
 
   async onSubmit(form: NgForm) {
-    console.log(form.value);
     try {
       let token = await DefaultService.loginForAccessTokenTokenPost({
         username: form.value.email,

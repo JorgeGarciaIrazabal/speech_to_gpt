@@ -16,8 +16,13 @@ app.add_middleware(
 )
 
 
-@app.get("/app/chat")
+@app.get("/static/chat")
 def redirect_chat():
+    return RedirectResponse(url="/static")
+
+
+@app.get("/static/login")
+def redirect_login():
     return RedirectResponse(url="/static")
 
 

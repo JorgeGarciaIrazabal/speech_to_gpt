@@ -16,7 +16,7 @@ def search_online(question: str, news: bool = False):
     links = [r["link"] for r in res]
     loader = AsyncHtmlLoader(links, verify_ssl=False)
     docs = loader.load()
-    yield ChatMessage(role="log_message", content="analyzing data")
+    yield ChatMessage(role="log_message", content="analyzing online data")
     html2text_transformer = Html2TextTransformer(ignore_links=False, ignore_images=True)
     docs_transformed = html2text_transformer.transform_documents(docs)
     data_in_web = "\nWeb Page: \n".join(d.page_content for d in docs_transformed)

@@ -19,10 +19,12 @@
       <ion-item *ngFor="let message of messages"
                 class="message"
                 [ngClass]="{'message-user': message.role === 'user', 'message-assistant': message.role === 'assistant'}">
-        <ion-label>
+        <ion-label class="message-label">
+
           <markdown [data]="message.content">
           </markdown>
         </ion-label>
+        <ion-icon name="volume-high" size="small" slot="end" class="speech-icon" (click)="textToSpeech(message.content)"></ion-icon>
       </ion-item>
     </ion-list>
   </div>
@@ -42,6 +44,15 @@
           </ion-input>
         </ion-col>
         <ion-col size="auto">
+          <ion-button (mousedown)="startAudio()"
+                      (mouseup)="sendAudio()"
+                      (touchstart)="startAudio()"
+                      (touchend)="sendAudio()"
+                      [disabled]="newMessage!==''"
+          >
+            <ion-spinner *ngIf="sendingMessage"></ion-spinner>
+            <ion-icon *ngIf="!sendingMessage" name="mic-outline"></ion-icon>
+          </ion-button>
           <ion-button (click)="sendMessage()" [disabled]="newMessage===''">
             <ion-spinner *ngIf="sendingMessage"></ion-spinner>
             <ion-icon *ngIf="!sendingMessage" name="send"></ion-icon>

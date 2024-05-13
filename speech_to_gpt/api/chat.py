@@ -1,10 +1,14 @@
+import json
+import subprocess
 from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Annotated
 from typing import List
 
-from fastapi import Depends
+from fastapi import Depends, Form
 from fastapi import File, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
 from starlette.responses import StreamingResponse
 
 from speech_to_gpt.api import app
@@ -19,12 +23,23 @@ class ChatResponse(BaseModel):
 
 
 @app.post("/chat-audio")
-@async_timeit
-async def chat_audio_endpoint(audio: UploadFile = File(...)) -> ChatResponse:
-    raise NotImplementedError("not implemented")
-    response = chat_audio(await audio.read())
+async def chat_audio_endpoint(
+    audio: UploadFile = File(...),
+    messages: str = Form(...),
+) -> StreamingResponse:
+    messages = parse_obj_as(List[ChatMessage], json.loads(messages))
+    with TemporaryDirectory() as temp_dir:
+        audio_path = Path(temp_dir) / "audio.wav"
+        mp3_path = Path(temp_dir) / "audio.mp3"
+        audio_path.write_bytes(await audio.read())
+        subprocess.run(f"ffmpeg -i {audio_path} {mp3_path}", shell=True)
+        response = chat_audio(mp3_path.read_bytes(), messages)
 
-    return ChatResponse(response="".join([m.content for m in response]))
+    def model_dump_json():
+        for r in response:
+            yield r.model_dump_json() + "%%%%"
+
+    return StreamingResponse(model_dump_json(), media_type="application/json")
 
 
 @app.post("/chat")
